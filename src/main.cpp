@@ -15,6 +15,8 @@
 #include <initializer_list>
 #include <string>
 
+#include <Button.h>
+
 #include "pinouts.h"
 #include "secrets.h"
 #include "config.h"
@@ -22,6 +24,13 @@
 HomieDevice homie;
 // We'll need a place to save pointers to our created properties so that we can access them again later.
 HomieProperty *pPropBuzzer = NULL;
+HomieProperty *pPropButton1 = NULL;
+HomieProperty *pPropButton2 = NULL;
+HomieProperty *pPropButton3 = NULL;
+
+Button *button_1 = new Button(PIN_BUTTON_1, INPUT);
+Button *button_2 = new Button(PIN_BUTTON_2, INPUT);
+Button *button_3 = new Button(PIN_BUTTON_3, INPUT);
 
 void setup() {
   Serial.begin(115200);
@@ -94,34 +103,45 @@ void setup() {
       digitalWrite(16, strcmp(pSource->GetValue().c_str(), "true") == 0 ? HIGH : LOW); 
     });
 
-    pProp = pNode->NewProperty();
+    pPropButton1 = pProp = pNode->NewProperty();
     pProp->strFriendlyName = "Slot 1";
     pProp->strID = "slot-1";
     pProp->datatype = homieBool;
-    pProp->SetBool(false);
+    pProp->SetBool(button_1->isPressed());
     pProp->strFormat = "";
+    button_1->onChange([]() {
+      pPropButton1->SetBool(button_1->isPressed());
+    });
 
-    pProp = pNode->NewProperty();
+    pPropButton2 = pProp = pNode->NewProperty();
     pProp->strFriendlyName = "Slot 2";
     pProp->strID = "slot-2";
     pProp->datatype = homieBool;
-    pProp->SetBool(false);
+    pProp->SetBool(button_2->isPressed());
     pProp->strFormat = "";
+    button_2->onChange([]() {
+      pPropButton2->SetBool(button_2->isPressed());
+    });
 
-    pProp = pNode->NewProperty();
+    pPropButton3 = pProp = pNode->NewProperty();
     pProp->strFriendlyName = "Slot 3";
     pProp->strID = "slot-3";
     pProp->datatype = homieBool;
-    pProp->SetBool(false);
+    pProp->SetBool(button_3->isPressed());
     pProp->strFormat = "";
+    button_3->onChange([]() {
+      pPropButton3->SetBool(button_3->isPressed());
+    });
   }
 
   homie.strFriendlyName = friendlyName;
-  // #if defined(APPEND_MAC_TO_HOSTNAME)
-  //   homie.strID = hostname + "-" + mac;
-  // #else
+  #if defined(APPEND_MAC_TO_HOSTNAME)
+    char out[20];
+    sprintf(out, "%s-%X",hostname, ESP.getChipId());
+    homie.strID = out;
+  #else
     homie.strID = hostname;
-  // #endif
+  #endif
   homie.strID.toLowerCase();
 
   homie.strMqttServerIP = "192.168.88.170";
