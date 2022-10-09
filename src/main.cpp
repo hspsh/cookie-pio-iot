@@ -1,162 +1,33 @@
-#include "Button.h"
-// #include "RestClient.h"
 #include <Arduino.h>
-#include <AsyncMqttClient.h>
+
+#define USE_ASYNCMQTTCLIENT
+#define ARDUINO_ARCH_ESP8266
+#define HOMIELIB_VERBOSE
+#include <LeifHomieLib.h>
+
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
-// #include <WiFi.h>
+#else
+#include "WiFi.h"
+#endif
 
 #include <ArduinoOTA.h>
 #include <initializer_list>
 #include <string>
 
-
 #include "pinouts.h"
 #include "secrets.h"
+#include "config.h"
 
-// RestClient client = RestClient("banana.at.hsp.net.pl", 8000);
-AsyncMqttClient mqttClient;
-
-
-class MqNode {
-public:
-  virtual void onInit(String topic) = 0;
-};
-
-class MqButton : public MqNode {
-  Button button;
-  String name;
-
-public:
-  MqButton(String name, uint8 port) : button(port, INPUT), name(name) {}
-
-  void onInit(String topic) {
-    topic.concat("/");
-    topic.concat(name);
-
-    mqttClient.publish(topic.c_str(), 0, true,
-                       button.isPressed() ? "YES" : "NO");
-    button.onChange([topic, this]() {
-      mqttClient.publish(topic.c_str(), 0, true,
-                         button.isPressed() ? "YES" : "NO");
-    });
-  }
-};
-
-class MqIoNotif : public MqNode {
-  String name;
-  uint8 io_num;
-
-public:
-  MqIoNotif(String name, uint8 port) : name(name) {
-    io_num = port;
-  }
-
-  void onInit(String topic) {
-    topic.concat("/");
-    topic.concat(name);
-
-    mqttClient.onMessage(
-      [this](char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total){
-        //do stuff at some point
-      });
-  }
-};
-
-class MqStringProperty : public MqNode {
-  String name, value;
-
-public:
-  MqStringProperty(String name, String value) : name(name), value(value) {}
-
-  void onInit(String topic) {
-    topic.concat("/");
-    topic.concat(name);
-
-    mqttClient.publish(topic.c_str(), 0, true, value.c_str());
-  }
-};
-
-class MqStatsAggregate : public MqNode {
-  MqStringProperty mqIpAddr;
-
-public:
-  MqStatsAggregate() : mqIpAddr("ipAddr","2137") {}
-
-  void onInit(String topic) {
-    topic.concat("/");
-    topic.concat("stats");
-
-    // mqttClient.publish(topic.c_str(), 0, true, "idk");
-    mqIpAddr.onInit(topic);
-  }
-};
-
-
-template<int SIZE> class MqBranch : public MqNode {
-  String name;
-  std::array<MqNode*, SIZE> mqNodes;
-
-public:
-  MqBranch(String name, std::array<MqNode*, SIZE> mqNodes) : name(name), mqNodes(mqNodes) {}
-
-  void onInit(String topic) {
-    topic.concat("/");
-    topic.concat(name);
-
-    for(auto mqNode: mqNodes){
-        mqNode->onInit(topic);
-    }
-  }
-};
-
-template<int SIZE> class MqRoot {
-  String name;
-  std::array<MqNode*, SIZE> mqNodes;
-
-public:
-  MqRoot(String name, std::array<MqNode*, SIZE> mqNodes) : name(name), mqNodes(mqNodes) {}
-
-  void onInit() {
-    for(auto mqNode: mqNodes){
-        mqNode->onInit(name);
-    }
-    // root may subscribe to everything for debug purposes
-    // String topicWildcard = name+"/#";
-    // mqttClient.subscribe(topicWildcard.c_str(), 2);
-  }
-
-  void handleMessage(const char* topic, const char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-    // Serial.println("Service %s received %s",name.c_str(),(char*)topic);
-  }
-};
-
-// String deviceName = String(zESP.getChipId());
-String deviceName = "triton one";
-
-MqRoot<1> *mqTrittonService = 
-    new MqRoot<1>("homie", {
-      new MqBranch<2>(deviceName, {
-        new MqBranch<3>("nuttons", {
-          new MqButton("A", 14),
-          new MqButton("B", 13), 
-          new MqButton("C", 12)
-        }),
-        new MqStatsAggregate()
-    })
-  });
-
-
-void attachMessageHandler(AsyncMqttClient& client){
-  mqttClient.onMessage(
-    [](char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total){
-      mqTrittonService->handleMessage(topic,payload,properties,len,index,total);
-    });
-}
+HomieDevice homie;
+// We'll need a place to save pointers to our created properties so that we can access them again later.
+HomieProperty *pPropBuzzer = NULL;
 
 void setup() {
   Serial.begin(115200);
   // client.begin(, IOT_WIFI_PASSWD);
   pinMode(PIN_LED, OUTPUT);
+  pinMode(PIN_BUZZER, OUTPUT);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(IOT_WIFI_NAME, IOT_WIFI_PASSWD);
@@ -198,22 +69,85 @@ void setup() {
 
   ArduinoOTA.begin();
 
-  mqttClient.setServer("mqtt.hack", 1883);
-  mqttClient.onConnect([](bool b) { mqTrittonService->onInit(); });
-  // mqttClient.onMessage(
-  //   [](char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total){
-  //     mqTrittonService->handleMessage(topic,payload,properties,len,index,total);
-  //   });
-  mqttClient.connect();
+  {
+    HomieNode *pNode = homie.NewNode();
 
+    pNode->strID = "properties";
+    pNode->strFriendlyName = "Properties";
+    //		pNode->strType="customtype";
+
+    HomieProperty *pProp;
+
+    pPropBuzzer = pProp = pNode->NewProperty();
+    pProp->strFriendlyName = "Annoying Buzzer";
+    pProp->strID = "buzzer";
+    pProp->SetRetained(true);
+    pProp->SetSettable(true);
+    pProp->datatype = homieBool;
+    pProp->SetBool(false);
+    pProp->strFormat = "";
+    pProp->AddCallback([](HomieProperty *pSource) {
+			//this property is settable. We'll print it into the console whenever it's updated.
+			//you can set it from MQTT Explorer by publishing a number between 0-100 to homie/examplehomiedev/nodeid1/dimmer
+			//but remember to check the *retain* box.
+			Serial.printf("%s is now %s\n",pSource->strFriendlyName.c_str(),pSource->GetValue().c_str()); 
+      digitalWrite(16, strcmp(pSource->GetValue().c_str(), "true") == 0 ? HIGH : LOW); 
+    });
+
+    pProp = pNode->NewProperty();
+    pProp->strFriendlyName = "Slot 1";
+    pProp->strID = "slot-1";
+    pProp->datatype = homieBool;
+    pProp->SetBool(false);
+    pProp->strFormat = "";
+
+    pProp = pNode->NewProperty();
+    pProp->strFriendlyName = "Slot 2";
+    pProp->strID = "slot-2";
+    pProp->datatype = homieBool;
+    pProp->SetBool(false);
+    pProp->strFormat = "";
+
+    pProp = pNode->NewProperty();
+    pProp->strFriendlyName = "Slot 3";
+    pProp->strID = "slot-3";
+    pProp->datatype = homieBool;
+    pProp->SetBool(false);
+    pProp->strFormat = "";
+  }
+
+  homie.strFriendlyName = friendlyName;
+  // #if defined(APPEND_MAC_TO_HOSTNAME)
+  //   homie.strID = hostname + "-" + mac;
+  // #else
+    homie.strID = hostname;
+  // #endif
+  homie.strID.toLowerCase();
+
+  homie.strMqttServerIP = "192.168.88.170";
+	homie.strMqttUserName = MQTT_USERNAME;
+	homie.strMqttPassword = MQTT_PASSWD;
+  homie.Init();
 }
 
 void loop() {
   static int test = 0;
   static uint8_t heartbeat_pattern[] = {1,0,0,1,0,0,0,0,0,0,0,0,0};
+  static uint8_t errcon_pattern[] = {1,0,1,0,1,0,1,1,1,0,0,0,0};
   
   uint8_t pattern_index = (test++)% sizeof(heartbeat_pattern);
   digitalWrite(PIN_LED, heartbeat_pattern[pattern_index]);
+  if (pPropBuzzer->GetValue() == "true")
+  {
+    digitalWrite(PIN_BUZZER, heartbeat_pattern[pattern_index]);
+  } else {
+    digitalWrite(PIN_BUZZER, LOW);
+  }
+  if(!homie.IsConnected())
+	{
+    digitalWrite(PIN_BUZZER, errcon_pattern[pattern_index]);
+  }
   ArduinoOTA.handle();
+  homie.Loop();
   delay(100);
 }
