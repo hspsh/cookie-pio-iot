@@ -10,13 +10,12 @@
 #include <string>
 
 
-
+#include "pinouts.h"
 #include "secrets.h"
 
 // RestClient client = RestClient("banana.at.hsp.net.pl", 8000);
 AsyncMqttClient mqttClient;
 
-const int PIN_LED = 4;
 
 class MqNode {
 public:
