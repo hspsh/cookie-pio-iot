@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import os, json
 import subprocess
 
@@ -10,3 +12,5 @@ secrets_json = json.loads(secrets)
 with open("include/secrets.h", 'w', encoding = 'utf-8') as f:
     for k,v in secrets_json.items():
         f.write(f'#define {k} "{v}"\n')
+
+print("DONE :)")

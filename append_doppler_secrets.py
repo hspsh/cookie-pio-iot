@@ -1,7 +1,9 @@
+#! /usr/bin/env python
+
 import os, json
 import subprocess
 
-#it no work yet
+print("it no work yet")
 exit()
 
 secrets = subprocess.check_output("doppler secrets download --no-file".split(" "))
