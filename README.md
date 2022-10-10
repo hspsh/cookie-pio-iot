@@ -1,5 +1,9 @@
 # Our IOT Project :)
 
+## Basic requirements
+
+This project is based on platformio, an add-on for visual studio code.
+
 ## Setup
 
 In order to get access to secret tokens used in this project, do this:
@@ -10,6 +14,10 @@ In order to get access to secret tokens used in this project, do this:
 4. Run `doppler setup -p hsp-iot-secrets -c dev`
 5. Generate `secrets.h` header file `./generate_secret_header.py`
 
-## OTA
+## OTA ("over the air" programming)
 
-Disable firewall
+In order for our script to work properly, one must execute it in `platformio` environment. You can acquire it by clicking "terminal" icon in VSCode's bottom bar.
+
+In this terminal, run `upload_ota.sh <target device IP>`
+
+Take care, OTA may not work if your computer has firewall active.

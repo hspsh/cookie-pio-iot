@@ -1,1 +1,1 @@
-doppler run -- pio run -e ota_test -t upload
+doppler run -- pio run -e 8266_remote -t upload --upload-port $1
