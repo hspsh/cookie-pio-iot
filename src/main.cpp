@@ -1,8 +1,4 @@
 #include <Arduino.h>
-
-#define USE_ASYNCMQTTCLIENT
-#define ARDUINO_ARCH_ESP8266
-#define HOMIELIB_VERBOSE
 #include <LeifHomieLib.h>
 
 #if defined(ARDUINO_ARCH_ESP8266)
