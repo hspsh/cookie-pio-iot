@@ -1,4 +1,4 @@
-# My IOT Project :)
+# Our IOT Project :)
 
 ## Setup
 
