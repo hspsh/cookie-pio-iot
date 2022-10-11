@@ -146,23 +146,47 @@ void setup() {
   homie.Init();
 }
 
-void loop() {
-  static int test = 0;
+typedef enum {
+  PATTERN_NONE,
+  PATTERN_HBEAT,
+  PATTERN_ERR  
+} led_patterns_type_t;
+
+void handle_io_pattern(uint8_t pin, led_patterns_type_t target_pattern){
+  static uint32_t pattern_counter = 0;
   static uint8_t heartbeat_pattern[] = {1,0,0,1,0,0,0,0,0,0,0,0,0};
   static uint8_t errcon_pattern[] = {1,0,1,0,1,0,1,1,1,0,0,0,0};
   
-  uint8_t pattern_index = (test++)% sizeof(heartbeat_pattern);
-  digitalWrite(PIN_LED, heartbeat_pattern[pattern_index]);
+  switch (target_pattern){    
+    case PATTERN_HBEAT:
+      digitalWrite(PIN_LED, heartbeat_pattern[pattern_counter]%sizeof(heartbeat_pattern));
+      break;
+    
+    case PATTERN_ERR:
+      digitalWrite(PIN_LED, errcon_pattern[pattern_counter]%sizeof(errcon_pattern));
+      break;
+    case PATTERN_NONE:
+    default:
+      digitalWrite(pin,0);
+      break;
+  }
+  pattern_counter++;
+}
+
+void loop() {
+  if(homie.IsConnected()){
+    handle_io_pattern(PIN_LED,PATTERN_HBEAT);
+  } else {
+    handle_io_pattern(PIN_LED,PATTERN_ERR);
+  }
+
   if (pPropBuzzer->GetValue() == "true")
   {
-    digitalWrite(PIN_BUZZER, heartbeat_pattern[pattern_index]);
+    handle_io_pattern(PIN_BUZZER,PATTERN_HBEAT);
   } else {
-    digitalWrite(PIN_BUZZER, LOW);
+    handle_io_pattern(PIN_BUZZER,PATTERN_NONE);
   }
-  if(!homie.IsConnected())
-	{
-    digitalWrite(PIN_BUZZER, errcon_pattern[pattern_index]);
-  }
+
   ArduinoOTA.handle();
   homie.Loop();
   delay(100);
