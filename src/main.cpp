@@ -13,9 +13,12 @@
 
 #include <Button.h>
 
-#include "pinouts.h"
+#include "pinDefs.h"
 #include "secrets.h"
 #include "config.h"
+
+#include "commonFwUtils.h"
+
 
 HomieDevice homie;
 // We'll need a place to save pointers to our created properties so that we can access them again later.
@@ -144,36 +147,6 @@ void setup() {
 	homie.strMqttUserName = MQTT_USERNAME;
 	homie.strMqttPassword = MQTT_PASSWD;
   homie.Init();
-}
-
-typedef enum {
-  PATTERN_NONE,
-  PATTERN_HBEAT,
-  PATTERN_ERR  
-} led_patterns_type_t;
-
-void handle_io_pattern(uint8_t pin, led_patterns_type_t target_pattern){
-  static uint32_t pattern_counter = 0;
-  static uint8_t heartbeat_pattern[] = {1,0,0,1,0,0,0,0,0,0,0,0,0};
-  static uint8_t errcon_pattern[] = {1,0,1,0,1,0,1,1,1,0,0,0,0};
-  
-  switch (target_pattern){    
-    digitalWrite(PIN_LED, heartbeat_pattern[
-        pattern_counter % sizeof(heartbeat_pattern)
-      ]);
-      break;
-    
-    case PATTERN_ERR:
-      digitalWrite(PIN_LED, errcon_pattern[
-        pattern_counter % sizeof(errcon_pattern)
-      ]);
-      break;
-    case PATTERN_NONE:
-    default:
-      digitalWrite(pin,0);
-      break;
-  }
-  pattern_counter++;
 }
 
 void loop() {
