@@ -158,12 +158,15 @@ void handle_io_pattern(uint8_t pin, led_patterns_type_t target_pattern){
   static uint8_t errcon_pattern[] = {1,0,1,0,1,0,1,1,1,0,0,0,0};
   
   switch (target_pattern){    
-    case PATTERN_HBEAT:
-      digitalWrite(PIN_LED, heartbeat_pattern[pattern_counter]%sizeof(heartbeat_pattern));
+    digitalWrite(PIN_LED, heartbeat_pattern[
+        pattern_counter % sizeof(heartbeat_pattern)
+      ]);
       break;
     
     case PATTERN_ERR:
-      digitalWrite(PIN_LED, errcon_pattern[pattern_counter]%sizeof(errcon_pattern));
+      digitalWrite(PIN_LED, errcon_pattern[
+        pattern_counter % sizeof(errcon_pattern)
+      ]);
       break;
     case PATTERN_NONE:
     default:
