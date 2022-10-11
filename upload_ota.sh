@@ -1,1 +1,1 @@
-doppler run -- pio run -e 8266_remote -t upload --upload-port $1
+doppler run -- pio run -e hspota -t upload --upload-port $1

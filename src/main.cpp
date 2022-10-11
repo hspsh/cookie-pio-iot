@@ -27,9 +27,36 @@ HomieProperty *pPropButton1 = NULL;
 HomieProperty *pPropButton2 = NULL;
 HomieProperty *pPropButton3 = NULL;
 
-Button *button_1 = new Button(PIN_BUTTON_1, INPUT);
-Button *button_2 = new Button(PIN_BUTTON_2, INPUT);
-Button *button_3 = new Button(PIN_BUTTON_3, INPUT);
+Button* buttons[3];
+
+void init_homie_button(HomieNode* pNode, int pin_num, String id){
+  Button* pButton = new Button(pin_num, INPUT);
+  HomieProperty *pProperty = pNode->NewProperty();
+
+  pProperty->strFriendlyName = id;
+  pProperty->strID = id;
+  pProperty->datatype = homieBool;
+  pProperty->SetBool(pButton->isPressed());
+  pProperty->strFormat = "";
+  pButton->onChange([pButton,pProperty]() {
+    pProperty->SetBool(pButton->isPressed());
+  });
+}
+
+void init_buzzer(HomieNode* pNode, HomieProperty* pProperty, String id){
+  pProperty = pNode->NewProperty();
+  pProperty->strFriendlyName = "Annoying" + id;
+  pProperty->strID = id;
+  pProperty->SetRetained(true);
+  pProperty->SetSettable(true);
+  pProperty->datatype = homieBool;
+  pProperty->SetBool(false);
+  pProperty->strFormat = "";
+  //callback is actually not needed cause buzzer is handled in loop
+  // pPropBuzzer->AddCallback([](HomieProperty *pSource) {
+  // 	Serial.printf("%s is now %s\n",pSource->strFriendlyName.c_str(),pSource->GetValue().c_str()); 
+  // });
+}
 
 void setup() {
   Serial.begin(115200);
@@ -45,93 +72,16 @@ void setup() {
     flag = !flag;
   }
 
-  ArduinoOTA.setPassword(ARDUINO_OTA_PASSWD);
+  begin_hspota();    
+  HomieNode *pNode = homie.NewNode();
+  pNode->strID = "properties";
+  pNode->strFriendlyName = "Properties";
 
-  ArduinoOTA
-    .onStart([]() {
-      String type;
-      if (ArduinoOTA.getCommand() == U_FLASH)
-        type = "sketch";
-      else // U_SPIFFS
-        type = "filesystem";
+  init_homie_button(pNode, PIN_BUTTON_1, "slot-1");
+  init_homie_button(pNode, PIN_BUTTON_2, "slot-2");
+  init_homie_button(pNode, PIN_BUTTON_3, "slot-3");
 
-      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-      Serial.println("Start updating " + type);
-    });
-    ArduinoOTA.onEnd([]() {
-      Serial.println("\nEnd");
-    });
-
-    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    });
-
-    ArduinoOTA.onError([](ota_error_t error) {
-      Serial.printf("Error[%u]: ", error);
-      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-      else if (error == OTA_END_ERROR) Serial.println("End Failed");
-    });
-
-  ArduinoOTA.begin();
-
-  {
-    HomieNode *pNode = homie.NewNode();
-
-    pNode->strID = "properties";
-    pNode->strFriendlyName = "Properties";
-    //		pNode->strType="customtype";
-
-    HomieProperty *pProp;
-
-    pPropBuzzer = pProp = pNode->NewProperty();
-    pProp->strFriendlyName = "Annoying Buzzer";
-    pProp->strID = "buzzer";
-    pProp->SetRetained(true);
-    pProp->SetSettable(true);
-    pProp->datatype = homieBool;
-    pProp->SetBool(false);
-    pProp->strFormat = "";
-    pProp->AddCallback([](HomieProperty *pSource) {
-			//this property is settable. We'll print it into the console whenever it's updated.
-			//you can set it from MQTT Explorer by publishing a number between 0-100 to homie/examplehomiedev/nodeid1/dimmer
-			//but remember to check the *retain* box.
-			Serial.printf("%s is now %s\n",pSource->strFriendlyName.c_str(),pSource->GetValue().c_str()); 
-      digitalWrite(16, strcmp(pSource->GetValue().c_str(), "true") == 0 ? HIGH : LOW); 
-    });
-
-    pPropButton1 = pProp = pNode->NewProperty();
-    pProp->strFriendlyName = "Slot 1";
-    pProp->strID = "slot-1";
-    pProp->datatype = homieBool;
-    pProp->SetBool(button_1->isPressed());
-    pProp->strFormat = "";
-    button_1->onChange([]() {
-      pPropButton1->SetBool(button_1->isPressed());
-    });
-
-    pPropButton2 = pProp = pNode->NewProperty();
-    pProp->strFriendlyName = "Slot 2";
-    pProp->strID = "slot-2";
-    pProp->datatype = homieBool;
-    pProp->SetBool(button_2->isPressed());
-    pProp->strFormat = "";
-    button_2->onChange([]() {
-      pPropButton2->SetBool(button_2->isPressed());
-    });
-
-    pPropButton3 = pProp = pNode->NewProperty();
-    pProp->strFriendlyName = "Slot 3";
-    pProp->strID = "slot-3";
-    pProp->datatype = homieBool;
-    pProp->SetBool(button_3->isPressed());
-    pProp->strFormat = "";
-    button_3->onChange([]() {
-      pPropButton3->SetBool(button_3->isPressed());
-    });
-  }
+  init_buzzer(pNode,pPropBuzzer, "buzzer");  
 
   homie.strFriendlyName = friendlyName;
   #if defined(APPEND_MAC_TO_HOSTNAME)
