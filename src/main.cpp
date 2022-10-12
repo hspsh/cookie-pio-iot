@@ -16,12 +16,9 @@
 #include "pinDefs.h"
 #include "secrets.h"
 #include "config.h"
-
 #include "commonFwUtils.h"
 
-
 HomieDevice homie;
-// We'll need a place to save pointers to our created properties so that we can access them again later.
 HomieProperty *pPropBuzzer = NULL;
 HomieProperty *pPropButton1 = NULL;
 HomieProperty *pPropButton2 = NULL;
@@ -45,7 +42,7 @@ void init_homie_button(HomieNode* pNode, int pin_num, String id){
 
 void init_buzzer(HomieNode* pNode, HomieProperty* pProperty, String id){
   pProperty = pNode->NewProperty();
-  pProperty->strFriendlyName = "Annoying" + id;
+  pProperty->strFriendlyName = "Annoying " + id;
   pProperty->strID = id;
   pProperty->SetRetained(true);
   pProperty->SetSettable(true);
@@ -56,6 +53,23 @@ void init_buzzer(HomieNode* pNode, HomieProperty* pProperty, String id){
   // pPropBuzzer->AddCallback([](HomieProperty *pSource) {
   // 	Serial.printf("%s is now %s\n",pSource->strFriendlyName.c_str(),pSource->GetValue().c_str()); 
   // });
+}
+
+void init_homie_stuff(HomieDevice* pHomie){
+  pHomie->strFriendlyName = friendlyName;
+  #if defined(APPEND_MAC_TO_HOSTNAME)
+    char out[20];
+    sprintf(out, "%s-%X",hostname, ESP.getChipId());
+    pHomie->strID = out;
+  #else
+    pHomie->strID = hostname;
+  #endif
+  pHomie->strID.toLowerCase();
+
+  pHomie->strMqttServerIP = "192.168.88.170";
+	pHomie->strMqttUserName = MQTT_USERNAME;
+	pHomie->strMqttPassword = MQTT_PASSWD;
+  pHomie->Init();
 }
 
 void setup() {
@@ -82,21 +96,7 @@ void setup() {
   init_homie_button(pNode, PIN_BUTTON_3, "slot-3");
 
   init_buzzer(pNode,pPropBuzzer, "buzzer");  
-
-  homie.strFriendlyName = friendlyName;
-  #if defined(APPEND_MAC_TO_HOSTNAME)
-    char out[20];
-    sprintf(out, "%s-%X",hostname, ESP.getChipId());
-    homie.strID = out;
-  #else
-    homie.strID = hostname;
-  #endif
-  homie.strID.toLowerCase();
-
-  homie.strMqttServerIP = "192.168.88.170";
-	homie.strMqttUserName = MQTT_USERNAME;
-	homie.strMqttPassword = MQTT_PASSWD;
-  homie.Init();
+  init_homie_stuff(&homie);  
 }
 
 void loop() {
