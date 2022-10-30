@@ -1,4 +1,6 @@
-# Our IOT Project :)
+# {{ cookiecutter.project_name }}
+
+{{ cookiecutter.project_short_description }}
 
 ## Basic requirements
 
