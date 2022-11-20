@@ -23,3 +23,9 @@ In order for our script to work properly, one must execute it in `platformio` en
 In this terminal, run `upload_ota.sh <target device IP>`
 
 Take care, OTA may not work if your computer has firewall active.
+
+## Serial monitoring issues
+
+If monitoring keeps the target in reset state, manually perform DTR/RTS sequence by typing following keys in order:
+
+`CTRL + [T,D,T,R]`
