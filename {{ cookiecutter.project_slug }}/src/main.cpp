@@ -59,7 +59,7 @@ void init_homie_stuff(HomieDevice* pHomie){
   pHomie->strFriendlyName = friendlyName;
   #if defined(APPEND_MAC_TO_HOSTNAME)
     char out[20];
-    sprintf(out, "%s-%X",hostname, ESP.getChipId());
+    sprintf(out, "%s-%X",hostname, WiFi.macAddress().c_str());
     pHomie->strID = out;
   #else
     pHomie->strID = hostname;
@@ -80,10 +80,14 @@ void setup() {
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(IOT_WIFI_NAME, IOT_WIFI_PASSWD);
-  while (WiFi.waitForConnectResult(3000) != WL_CONNECTED) {
+
+  while (WiFi.status() != WL_CONNECTED) {
     static bool flag = false;
     digitalWrite(PIN_LED,flag);
     flag = !flag;
+
+    Serial.print(".");
+    delay(3000);    
   }
 
   begin_hspota();    

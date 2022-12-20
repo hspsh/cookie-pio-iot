@@ -5,6 +5,7 @@
     "device_hostname": "{{ cookiecutter.project_slug }}",
     "add_mac_to_hostname": "y",
     "device_friendly_name": "{{ cookiecutter.project_name }}",
-    "pio_platform": ["espressif8266@2.6.3"],
-    "device_mqtt_host": "mqtt.hack"
+    "pio_platform": ["ESP8266", "ESP32", "ESP32C3"],
+    "device_mqtt_host": "mqtt.hack",
+    "fallback_mqtt_ip": "192.168.88.20"
 }

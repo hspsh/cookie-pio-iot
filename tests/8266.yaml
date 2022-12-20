@@ -1,0 +1,6 @@
+default_context:
+    project_name: "8266"
+    add_mac_to_hostname: "y"
+    pio_platform: "ESP8266"
+    device_mqtt_host: "example.com"
+    fallback_mqtt_ip: "0.0.0.0"
